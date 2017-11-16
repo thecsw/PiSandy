@@ -287,7 +287,7 @@ def handle(msg):
         log_message('Initializing user\'s lastname - [{}]...'.format(lastname), False)
     except:
 	print("The user - [{}] doesn't have lastname".format(user_id))
-    command = msg['text'].encode('utf-8')
+    command = msg['text'].encode('utf-8').lower()
     log_message('Initializing command - [{}]...'.format(command), False)
     #print ('[ {} ] {} : {}'.format(user_id, name, command))
     #START
