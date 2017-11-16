@@ -38,6 +38,8 @@ import RPi.GPIO as GPIO
 log_library('GPIO')
 import random
 log_library('random')
+import config
+log_library('config')
 
 #Output some log message
 def log_message(operation, delay):
@@ -68,7 +70,7 @@ with open('SPI.txt', 'a') as file:
     
 #Entering bots Telegram API key
 log_message('Validating the key for Telegram API Wrapper...', True)
-telekey = '439816740:AAGUv-uFga0Vf7XX9-yTPADabX6Eiuf_Bwg'
+telekey = config.telegramToken
 bot = telepot.Bot(telekey)
 
 #Getting bot specification
@@ -77,7 +79,7 @@ bot.getMe()
 
 #Initializing the cleverbot
 log_message('Validating the key for Cleverbot API Wrapper...', True)
-cleverkey = '6c3f005ec8f79dd543c7cca772a75fa9'
+cleverkey = config.cleverbotToken
 cb = cleverbot.Cleverbot(cleverkey, timeout=60)
 log_message('Resetting the Cleverbot bot...', True)
 cb.reset()
