@@ -33,6 +33,8 @@ log_library('SenseHat')
 #Multiple function simultaneously
 import thread
 log_library('thread')
+from statistics import mean, stdev 
+log_library('thread')
 #RGB bulb
 import RPi.GPIO as GPIO
 log_library('GPIO')
@@ -44,8 +46,6 @@ log_library('config')
 #Output some log message
 def log_message(operation, delay):
     print(operation),
-    if (delay):
-        time.sleep(random.random()/2)
     print "Done."
     return
 
@@ -53,6 +53,8 @@ def log_message(operation, delay):
 log_message('Initializing temperature arrays...', True)
 thermo = [3.14, 2.71, 1.41, 1, 0]
 thermof = [0,0,0,0,0]
+hum_mes = [0,0,0,0,0]
+pres_mes = [0,0,0,0,0]
 
 #Initializing sensehat
 log_message('Establishing connection with SenseHat...', True)
@@ -159,7 +161,7 @@ def MULTOUTPUT (COLOR, COLORS):
 log_message('Initializing method for warning calling...', True)
 def warning ():
     #log_message('Configuring the light bulb...', False)
-    averround = round(average(thermo), 2)
+    averround = round(mean(thermo), 2)
     if averround < 30:
 	if averround > 26:
             MULTOUTPUT(RED, GREEN)
@@ -221,26 +223,12 @@ log_message('Initializing method for collecting temperature measurements from al
 def getraw():
     #log_message('Collecting measurements from all temperature sensors...', False)
     global thermo
-    thermo = [read_temp(0), read_temp(2), read_temp(4), read_temp(3), read_temp(1)]
+    thermo = [read_temp(2), read_temp(2), read_temp(4), read_temp(3), read_temp(1)] # my 0th temperature sensor is malfunctioning, so I just don't use it
     for i in range (0, len(thermo)):
         thermof[i]=thermo[i]*1.8+32
-
-#Calculate average of an array with n elements
-log_message('Initializing method for calculating average values...', True)
-def average(arr):
-    sum = 0
-    for i in range(0, len(arr)):
-	sum = sum + arr[i]
-    result = sum / len(arr)
-    return result
-
-#Calculate standard deviation
-log_message('Initializing method for calculating standard deviations...', True)
-def standard_dev(arr):
-    sum = 0
-    for i in range(0, len(arr)):
-	sum = sum + math.pow((arr[i] - average(arr)), 2)
-    return math.sqrt(sum / (len(arr) - 1))
+        hum_mes[i] = sense.get_humidity()
+        pres_mes[i] = sense.get_pressure()
+        time.sleep(.2)
 
 log_message('Initializing method for sleeping...', True)
 #Sleep function
@@ -277,18 +265,18 @@ and 5 DS18B20 temperature sensors')
 log_message('Initializing method for handling new Telegram messages...', True)
 def handle(msg):
     user_id = msg['chat']['id']
-    log_message('Initializing user id - [{}]...'.format(user_id), False)
+    log_message('/n    Initializing user id - [{}]...'.format(user_id), False)
     msg_id = msg['message_id']
-    log_message('Initializing message id - [{}]...'.format(msg_id), False)
+    log_message('    Initializing message id - [{}]...'.format(msg_id), False)
     name = msg['chat']['first_name'].encode('utf-8')
-    log_message('Initializing user\'s name - [{}]...'.format(name), False)
+    log_message('    Initializing user\'s name - [{}]...'.format(name), False)
     try:
         lastname = msg['chat']['last_name'].encode('utf-8')
-        log_message('Initializing user\'s lastname - [{}]...'.format(lastname), False)
+        log_message('    Initializing user\'s lastname - [{}]...'.format(lastname), False)
     except:
 	print("The user - [{}] doesn't have lastname".format(user_id))
     command = msg['text'].encode('utf-8').lower()
-    log_message('Initializing command - [{}]...'.format(command), False)
+    log_message('    Initializing command - [{}]...'.format(command), False)
     #print ('[ {} ] {} : {}'.format(user_id, name, command))
     #START
     if command == '/start':
@@ -307,7 +295,7 @@ Have a nice day!' ))
     if command == '/gethumidity':
         try:
             #humidity = pround(sense.get_humidity())
-            thread.start_new_thread(sms, (user_id, 'Humidity : {} ± 0.01%rH'.format(round(sense.get_humidity(), 2))))
+            thread.start_new_thread(sms, (user_id, 'Humidity : {} ± {}%rH'.format(round(sense.get_humidity(), 2), round(stdev(hum_mes), 2))))
             log_message('Sending request ({}) answer from [{}]{}...'.format(command, user_id, name), False)
         except:
             print('Exception caught!')
@@ -327,7 +315,7 @@ Have a nice day!' ))
     if command == '/getpressure':
         try:
             #pressure = pround(sense.get_pressure())
-            thread.start_new_thread(sms, (user_id, 'Pressure : {} ± 0.01 Millibars'.format(round(sense.get_pressure(), 2))))
+            thread.start_new_thread(sms, (user_id, 'Pressure : {} ± {} Millibars'.format(round(sense.get_pressure(), 2), round(stdev(pres_mes), 2))))
             log_message('Sending request ({}) answer from [{}]{}...'.format(command, user_id, name), False)
         except:
             print('Exception caught!')
@@ -336,14 +324,14 @@ Have a nice day!' ))
     #HELP
     if command == '/help':
         try:
-            thread.start_new_thread(sms ,(user_id, 'Command list\n\
-/get to get data from all sensors\n\
-/gettemp to get mean temperature\n\
-/gethumidity to get humidity level\n\
-/getpressure to get pressure level\n\
-/getdew to get the dew point\n\
-/help to get this help screen\n\
-/time to get current time (local)\n'))
+            thread.start_new_thread(sms ,(user_id, '''Command list
+/get to get data from all sensors
+/gettemp to get mean temperature
+/gethumidity to get humidity level
+/getpressure to get pressure level
+/getdew to get the dew point
+/help to get this help screen
+/time to get current time (local)'''))
             log_message('Sending request ({}) answer from [{}]{}...'.format(command, user_id, name), False)
 	except:
             print('Exception caught!')
@@ -393,12 +381,12 @@ Have a nice day!' ))
             thread.start_new_thread(sms, (user_id, 'Temperature :\n\
 Celcius - {} ± {}°C\n\
 Fahrenheit - {} ± {}°F\n\
-Kelvin - {} ± {}K'.format(round(average(thermo), 1),
-                          round(standard_dev(thermo), 2),
-                          round(average(thermo)*1.8+32, 1),
-                          round(standard_dev(thermof), 2),
-                          round(average(thermo), 1)+273,
-                          round(standard_dev(thermo), 2))))
+Kelvin - {} ± {}K'.format(round(mean(thermo), 1),
+                          round(stdev(thermo), 2),
+                          round(mean(thermo)*1.8+32, 1),
+                          round(stdev(thermof), 2),
+                          round(mean(thermo), 1)+273,
+                          round(stdev(thermo), 2))))
             log_message('Sending request ({}) answer from [{}]{}...'.format(command, user_id, name), False)
         except:
             print('Exception caught!')
